@@ -112,11 +112,11 @@ st.markdown("""
         transform: translateY(-1px) !important;
         box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35) !important;
     }
-    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
+    div[data-testid="column"] div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
         background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
     }
-    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
+    div[data-testid="column"] div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
         box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4) !important;
     }
     button[data-baseweb="tab"] {
