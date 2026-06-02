@@ -33,7 +33,7 @@ if "query_params" in dir(st) and st.query_params.get("api") == "true":
 # =========================================================
 # 🎨 HIGH-AESTHETIC CUSTOM DESIGN SYSTEM (CSS INJECTION)
 # =========================================================
-st.set_page_config(page_title="Helix Maritime Intelligence", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Email Segregation Intelligence", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -177,7 +177,7 @@ def load_data(table_name):
         return df
 
 # --- BRAND SUB-HEADER SYSTEM ---
-st.markdown('<p class="brand-title">HELIX MARITIME INTELLIGENCE</p>', unsafe_allow_html=True)
+st.markdown('<p class="brand-title">Email Segregation Intelligence</p>', unsafe_allow_html=True)
 st.markdown('<p class="brand-subtitle">Deterministic Entity Ingestion Platform & Programmatic API Suite</p>', unsafe_allow_html=True)
 
 # --- OVERVIEW PERFORMANCE METRICS ---
