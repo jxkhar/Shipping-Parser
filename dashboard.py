@@ -4,20 +4,14 @@ import pandas as pd
 import json
 from app import ShippingEngine
 
-# =========================================================
-# 🛑 PROGRAMMATIC API INTERCEPTOR LAYER (MENTOR REQUIREMENT)
-# =========================================================
 if "query_params" in dir(st) and st.query_params.get("api") == "true":
     engine = ShippingEngine()
     raw_email = st.query_params.get("email_body", "")
-    
     if not raw_email:
         st.json({"status": "error", "message": "Email input stream parameter missing."})
         st.stop()
-        
     chunks = engine.segment_and_clean(raw_email)
     response_payload = {"TONNAGE": [], "CARGO_VC": [], "CARGO_TC": []}
-    
     for chunk in chunks:
         category = engine.classify(chunk)
         if category in ["TONNAGE", "CARGO_VC", "CARGO_TC"]:
@@ -26,26 +20,18 @@ if "query_params" in dir(st) and st.query_params.get("api") == "true":
             else: data = engine.parse_tc(chunk)
             response_payload[category].append(data)
             engine.save_to_db(category, data, chunk)
-            
     st.json(response_payload)
     st.stop()
 
-# =========================================================
-# 🎨 HIGH-AESTHETIC CUSTOM DESIGN SYSTEM (CSS INJECTION)
-# =========================================================
 st.set_page_config(page_title="Email Segregation Intelligence", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
-    /* Global Background & Typography Reset */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #0b0f19 !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
-    
-    /* Custom Title Typography */
     .brand-title {
         font-size: 2.25rem !important;
         font-weight: 800 !important;
@@ -55,7 +41,6 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         margin-bottom: 0px !important;
     }
-    
     .brand-subtitle {
         color: #64748b !important;
         font-size: 0.95rem !important;
@@ -64,15 +49,12 @@ st.markdown("""
         margin-top: -5px !important;
         margin-bottom: 35px !important;
     }
-
-    /* Bespoke Metric Cards Design */
     div[data-testid="stMetricValue"] {
         font-size: 1.8rem !important;
         font-weight: 700 !important;
         color: #f8fafc !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
-    
     div[data-testid="stMetricLabel"] {
         color: #94a3b8 !important;
         font-size: 0.85rem !important;
@@ -80,8 +62,6 @@ st.markdown("""
         letter-spacing: 0.05em !important;
         font-weight: 600 !important;
     }
-
-    /* Custom Floating Card Container Blocks */
     .card-pane {
         background: #111827;
         border: 1px solid #1f2937;
@@ -90,7 +70,6 @@ st.markdown("""
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         margin-bottom: 20px;
     }
-    
     .card-header {
         font-size: 1.1rem !important;
         font-weight: 700 !important;
@@ -100,14 +79,11 @@ st.markdown("""
         align-items: center;
         gap: 8px;
     }
-    
     .card-subheader {
         font-size: 0.8rem !important;
         color: #64748b !important;
         margin-bottom: 20px !important;
     }
-
-    /* Custom Input Window Restyling */
     textarea {
         background-color: #030712 !important;
         border: 1px solid #1f2937 !important;
@@ -117,13 +93,10 @@ st.markdown("""
         font-size: 0.85rem !important;
         padding: 14px !important;
     }
-    
     textarea:focus {
         border-color: #06b6d4 !important;
         box-shadow: 0 0 0 1px #06b6d4 !important;
     }
-
-    /* High-Aesthetic Accent Button */
     .stButton>button {
         background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%) !important;
         color: #ffffff !important;
@@ -135,13 +108,17 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important;
         box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2) !important;
     }
-    
     .stButton>button:hover {
         transform: translateY(-1px) !important;
         box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35) !important;
     }
-
-    /* Clean Minimalist Custom Tabs */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+    }
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4) !important;
+    }
     button[data-baseweb="tab"] {
         color: #64748b !important;
         font-size: 0.9rem !important;
@@ -150,13 +127,10 @@ st.markdown("""
         border: none !important;
         padding: 10px 16px !important;
     }
-    
     button[data-baseweb="tab"][aria-selected="true"] {
         color: #06b6d4 !important;
         border-bottom: 2px solid #06b6d4 !important;
     }
-
-    /* Hide default streamlit containers design artifacts */
     div[data-testid="stVerticalBlockBorderContainer"] {
         background-color: transparent !important;
         border: none !important;
@@ -176,11 +150,9 @@ def load_data(table_name):
         if 'raw_text' in df.columns: df = df.drop(columns=['raw_text'])
         return df
 
-# --- BRAND SUB-HEADER SYSTEM ---
-st.markdown('<p class="brand-title">Email Segregation Intelligence</p>', unsafe_allow_html=True)
+st.markdown('<p class="brand-title">EMAIL SEGREGATION INTELLIGENCE</p>', unsafe_allow_html=True)
 st.markdown('<p class="brand-subtitle">Deterministic Entity Ingestion Platform & Programmatic API Suite</p>', unsafe_allow_html=True)
 
-# --- OVERVIEW PERFORMANCE METRICS ---
 try:
     t_count = len(load_data("tonnage_records"))
     vc_count = len(load_data("cargo_vc_records"))
@@ -205,7 +177,6 @@ with m_col3:
         st.metric(label="⏳ Time Charter Terminals (TC)", value=f"{tc_count} Trips")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- WORKSPACE INTERACTION SECTION ---
 col_left, col_right = st.columns([1, 1.4], gap="large")
 
 with col_left:
@@ -220,7 +191,13 @@ with col_left:
         label_visibility="collapsed"
     )
     
-    if st.button("Execute Pipeline Matrix", use_container_width=True):
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        execute_pipeline = st.button("Execute Pipeline Matrix", use_container_width=True)
+    with btn_col2:
+        clear_database = st.button("Flush Database Matrix", use_container_width=True)
+        
+    if execute_pipeline:
         if email_input.strip():
             chunks = engine.segment_and_clean(email_input)
             processed_count = 0
@@ -233,10 +210,17 @@ with col_left:
                     engine.save_to_db(category, data, chunk)
                     processed_count += 1
             if processed_count > 0:
-                st.success(f"Parsing complete. Extracted {processed_count} entities.")
                 st.rerun()
-            else:
-                st.warning("No operational patterns recognized.")
+                
+    if clear_database:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM tonnage_records")
+            cursor.execute("DELETE FROM cargo_vc_records")
+            cursor.execute("DELETE FROM cargo_tc_records")
+            conn.commit()
+        st.rerun()
+        
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
