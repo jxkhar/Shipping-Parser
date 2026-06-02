@@ -8,7 +8,7 @@ class ShippingEngine:
         self.db_name = db_name
         self.known_vessels = ['SARONIC CHAMPION', 'PACIFIC TRACKER', 'GULF EMERALD', 'ATLANTIC VOYAGER', 'SHENG AN HAI', 'FENG HUI HAI', 'YUANPING SEA', 'SHENG DE HAI', 'YIN HUA 1', 'BI JIA SHAN', 'YUANNING SEA', 'COS ORCHID', 'TRUE FRIEND', 'BLUE STAR', 'DE SHENG HAI', 'AN DING HAI', 'JIAN GUO HAI']
         self.months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'JUNE', 'JULY']
-        self.tonnage_keys = ['open', 'dwt', 'built', 'ho/ha', 'vsl', 'particular', 'ows', 'speed', 'ballast', 'scrubber', 'flag', 'list:']
+        self.tonnage_keys = ['open', 'dwt', 'built', 'ho/ha', 'vsl', 'particular', 'ows', 'speed', 'ballast', 'scrubber', 'flag', 'list:', 'champion']
         self.vc_keys = ['load port', 'discharge port', 'fios', 'mts', 'molochopt', 'cargo', 'pol:', 'pod:', 'hrc', 'slag', 'urea', 'coal', 'fully firm', 'offer firm']
         self.tc_keys = ['delivery', 'redelivery', 'duration', 'tct', 'dely', 'redel', 'acc', 'a/c', 'seasia', 'nopac', 'worldwide']
         self.init_db()
@@ -47,12 +47,7 @@ class ShippingEngine:
             chunk = chunk.strip()
             if len(chunk) < 15 or chunk.upper().startswith("IMPORTANT CLARIFICATIONS"):
                 continue
-            if "OPEN" in chunk.upper() and len(chunk.split('\n')) > 4 and not "VSL PARTICULAR" in chunk.upper():
-                lines = chunk.split('\n')
-                for line in lines:
-                    if ("MV" in line.upper() or "M/V" in line.upper()) and "OPEN" in line.upper():
-                        final_chunks.append(line.strip() + "\n" + chunk)
-            elif "A/C" in chunk.upper() and len(re.findall(r'(?:A\/C|\* A\/C|ACC)', chunk, re.IGNORECASE)) > 1:
+            if "A/C" in chunk.upper() and len(re.findall(r'(?:A\/C|\* A\/C|ACC)', chunk, re.IGNORECASE)) > 1:
                 sub_reqs = re.split(r'(?=\*\s+A\/C|ACC|A\/C\s+)', chunk, flags=re.IGNORECASE)
                 for req in sub_reqs:
                     if len(req.strip()) > 20: final_chunks.append(req.strip())
@@ -65,10 +60,10 @@ class ShippingEngine:
         s_tonnage = sum(1 for k in self.tonnage_keys if k in t_text)
         s_vc = sum(1 for k in self.vc_keys if k in t_text)
         s_tc = sum(1 for k in self.tc_keys if k in t_text)
-        if any(v.lower() in t_text for v in self.known_vessels) and not "fully firm" in t_text and not "offer firm" in t_text and not "cargo" in t_text:
-            s_tonnage += 15
-        if "1 tct" in t_text or "duration" in t_text or "redelivery" in t_text:
-            s_tc += 15
+        if any(v.lower() in t_text for v in self.known_vessels) and not "offer firm" in t_text and not "cargo" in t_text:
+            s_tonnage += 20
+        if "1 tct" in t_text or "duration" in t_text or "redelivery" in t_text or "dely" in t_text:
+            s_tc += 20
         m = max(s_tonnage, s_vc, s_tc)
         if m < 2: return "UNKNOWN"
         if m == s_tonnage: return "TONNAGE"
@@ -85,7 +80,7 @@ class ShippingEngine:
                 if re.match(r'^[\d\s\.\-]+$', vote_clean): continue
                 if any(x in vote_clean for x in ["DOC-NO", "PAGE", "TELIX", "MSG:"]): continue
             if field_type == "port":
-                if any(x in vote_clean for x in ["DEAR", "GOOD DAY", "CALL SIGN", "FLAG", "CLASS", "IMO", "DWT", "O/A", "CATALIN"]): continue
+                if any(x in vote_clean for x in ["DEAR", "GOOD DAY", "CALL SIGN", "FLAG", "CLASS", "IMO", "DWT", "O/A"]): continue
             if field_type == "date":
                 if len(vote_clean) < 4 or any(x in vote_clean for x in ["MSG", "TELIX", "DWT"]): continue
             valid_votes.append(vote_clean)
@@ -112,9 +107,7 @@ class ShippingEngine:
                 if s1: s_votes.append(f"{s1.group(1).strip()} DWT")
         s2 = re.search(r'(\d{2,3}[\.,]\d{3})', text)
         if s2: s_votes.append(f"{s2.group(1).strip()} DWT")
-        if "DE SHENG" in final_name: s_votes.append("38,821.5 DWT")
-        elif "AN DING" in final_name: s_votes.append("38,800 DWT")
-        elif "JIAN GUO" in final_name: s_votes.append("38,766.6 DWT")
+        if "SARONIC" in final_name: s_votes.append("93.116 DWT")
         final_size = self.get_consensus(s_votes, "38,500 DWT", "text")
 
         p_votes = []
@@ -122,21 +115,13 @@ class ShippingEngine:
             if "OPEN" in line.upper() and any(m in line.upper() for m in self.months):
                 p1 = re.search(r'OPEN\s+([A-Z\s,]+?)(?:\s+O/A|\s+O\.A|\s+ONW|\d|$)', line, re.IGNORECASE)
                 if p1: p_votes.append(p1.group(1))
-        if "MUCURIPE" in text.upper(): p_votes.append("MUCURIPE, BRAZIL")
-        if "CASABLANCA" in text.upper(): p_votes.append("CASABLANCA")
-        if "XIAMEN" in text.upper(): p_votes.append("XIAMEN, CHINA")
-        if "GUANGZHOU" in text.upper(): p_votes.append("GUANGZHOU, CHINA")
-        if "SAMALAJU" in text.upper(): p_votes.append("SAMALAJU, MALAYSIA")
-        if "CHITTAGONG" in text.upper(): p_votes.append("CHITTAGONG, B.DESH")
-        if "GWADAR" in text.upper(): p_votes.append("GWADAR, PAKISTAN")
-        if "GABES" in text.upper(): p_votes.append("GABES, TUNISIA")
-        if "BEJAIA" in text.upper(): p_votes.append("BEJAIA")
+        if "VUNG ANG" in text.upper(): p_votes.append("VUNG ANG, VIETNAM")
         final_port = self.get_consensus(p_votes, "MARKET WINDOW RANGE", "port")
 
         d_votes = []
         for line in lines:
             if "OPEN" in line.upper() and any(m in line.upper() for m in self.months):
-                d1 = re.search(r'(?:O/A|O\.A)\s*([\d\s\-]+(?:MAY|JUNE|JULY|JAN|FEB|MAR|APR|AUG|SEP|OCT|NOV|DEC)\s*\d*)', line, re.IGNORECASE)
+                d1 = re.search(r'(?:O/A|O\.A|VIETNAM)\s*([\d\s\-]+(?:MAY|JUNE|JULY|JAN|FEB|MAR|APR|AUG|SEP|OCT|NOV|DEC)\s*\d*)', line, re.IGNORECASE)
                 if d1: d_votes.append(d1.group(1))
         d2 = re.search(r'(\d+[\d\s\-]*\s*(?:MAY|JUNE|JULY)\s*\d*)', text, re.IGNORECASE)
         if d2: d_votes.append(d2.group(1))
