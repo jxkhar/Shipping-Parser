@@ -173,7 +173,7 @@ class ShippingEngine:
         
         if loading_port == "MARKET RANGE" or discharge_port == "MARKET RANGE":
             for line in lines:
-                if "/" in line and not "EMAIL" in line.upper() and not "@" in line:
+                if "/" in line and not any(x in line.upper() for x in ["EMAIL", "@", "ATTN", "ATT.", "DESK", "PHONE", "WWW"]):
                     parts = re.split(r'\s*/\s*', line.strip())
                     if len(parts) == 2:
                         if len(parts[0].strip()) < 20 and len(parts[1].strip()) < 20:
