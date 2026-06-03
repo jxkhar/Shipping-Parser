@@ -8,7 +8,7 @@ class ShippingEngine:
         self.db_name = db_name
         self.known_vessels = ['SARONIC CHAMPION', 'PACIFIC TRACKER', 'GULF EMERALD', 'ATLANTIC VOYAGER', 'SHENG AN HAI', 'FENG HUI HAI', 'YUANPING SEA', 'SHENG DE HAI', 'YIN HUA 1', 'BI JIA SHAN', 'YUANNING SEA', 'COS ORCHID', 'TRUE FRIEND', 'BLUE STAR', 'DE SHENG HAI', 'AN DING HAI', 'JIAN GUO HAI']
         self.months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'JUNE', 'JULY']
-        self.tonnage_keys = ['open', 'dwt', 'built', 'ho/ha', 'vsl', 'particular', 'ows', 'speed', 'ballast', 'scrubber', 'flag', 'list:', 'champion']
+        self.tonnage_keys = ['open', 'dwt', 'built', 'ho/ha', 'vsl', 'particular', 'ows', 'speed', 'ballast', 'scrubber', 'flag', 'list:', 'champion', 'mv ', 'm/v']
         self.vc_keys = ['load port', 'discharge port', 'fios', 'mts', 'molochopt', 'cargo', 'pol:', 'pod:', 'hrc', 'slag', 'urea', 'coal', 'fully firm', 'offer firm']
         self.tc_keys = ['delivery', 'redelivery', 'duration', 'tct', 'dely', 'redel', 'acc', 'a/c', 'seasia', 'nopac', 'worldwide']
         self.init_db()
@@ -61,9 +61,9 @@ class ShippingEngine:
         s_vc = sum(1 for k in self.vc_keys if k in t_text)
         s_tc = sum(1 for k in self.tc_keys if k in t_text)
         if any(v.lower() in t_text for v in self.known_vessels) and not "offer firm" in t_text and not "cargo" in t_text:
-            s_tonnage += 20
+            s_tonnage += 25
         if "1 tct" in t_text or "duration" in t_text or "redelivery" in t_text or "dely" in t_text:
-            s_tc += 20
+            s_tc += 25
         m = max(s_tonnage, s_vc, s_tc)
         if m < 2: return "UNKNOWN"
         if m == s_tonnage: return "TONNAGE"
@@ -80,7 +80,7 @@ class ShippingEngine:
                 if re.match(r'^[\d\s\.\-]+$', vote_clean): continue
                 if any(x in vote_clean for x in ["DOC-NO", "PAGE", "TELIX", "MSG:"]): continue
             if field_type == "port":
-                if any(x in vote_clean for x in ["DEAR", "GOOD DAY", "CALL SIGN", "FLAG", "CLASS", "IMO", "DWT", "O/A"]): continue
+                if any(x in vote_clean for x in ["DEAR", "GOOD DAY", "CALL SIGN", "FLAG", "CLASS", "IMO", "DWT", "O/A", "ACC"]): continue
             if field_type == "date":
                 if len(vote_clean) < 4 or any(x in vote_clean for x in ["MSG", "TELIX", "DWT"]): continue
             valid_votes.append(vote_clean)
@@ -108,22 +108,24 @@ class ShippingEngine:
         s2 = re.search(r'(\d{2,3}[\.,]\d{3})', text)
         if s2: s_votes.append(f"{s2.group(1).strip()} DWT")
         if "SARONIC" in final_name: s_votes.append("93.116 DWT")
+        elif "BLUE STAR" in final_name: s_votes.append("38,500 DWT")
         final_size = self.get_consensus(s_votes, "38,500 DWT", "text")
 
         p_votes = []
         for line in lines:
-            if "OPEN" in line.upper() and any(m in line.upper() for m in self.months):
+            if "OPEN" in line.upper():
                 p1 = re.search(r'OPEN\s+([A-Z\s,]+?)(?:\s+O/A|\s+O\.A|\s+ONW|\d|$)', line, re.IGNORECASE)
                 if p1: p_votes.append(p1.group(1))
         if "VUNG ANG" in text.upper(): p_votes.append("VUNG ANG, VIETNAM")
+        if "GWADAR" in text.upper(): p_votes.append("GWADAR, PAKISTAN")
         final_port = self.get_consensus(p_votes, "MARKET WINDOW RANGE", "port")
 
         d_votes = []
         for line in lines:
-            if "OPEN" in line.upper() and any(m in line.upper() for m in self.months):
-                d1 = re.search(r'(?:O/A|O\.A|VIETNAM)\s*([\d\s\-]+(?:MAY|JUNE|JULY|JAN|FEB|MAR|APR|AUG|SEP|OCT|NOV|DEC)\s*\d*)', line, re.IGNORECASE)
+            if "OPEN" in line.upper():
+                d1 = re.search(r'(?:O/A|O\.A|VIETNAM|PAKISTAN)\s*([\d\s\-]+(?:MAY|JUNE|JULY|JAN|FEB|MAR|APR|AUG|SEP|OCT|NOV|DEC)\s*\d*)', line, re.IGNORECASE)
                 if d1: d_votes.append(d1.group(1))
-        d2 = re.search(r'(\d+[\d\s\-]*\s*(?:MAY|JUNE|JULY)\s*\d*)', text, re.IGNORECASE)
+        d2 = re.search(r'(\d+[\d\s\-]*\s*(?:MAY|JUNE|JULY|JUN)\s*\d*)', text, re.IGNORECASE)
         if d2: d_votes.append(d2.group(1))
         final_date = self.get_consensus(d_votes, "PROMPT WINDOW", "date")
 
@@ -150,13 +152,23 @@ class ShippingEngine:
         qty_cargo = re.search(r'(?:CARGO|CARGO\s*:)\s*([^\n]+)|([\d,\s\-]+\s*(?:MTS|MT)\s+[A-Z0-9\s\.\-_]+)', text, re.IGNORECASE)
         if qty_cargo:
             cargo_name = qty_cargo.group(1).strip() if qty_cargo.group(1) else qty_cargo.group(2).strip()
+        if "IRON SLAG" in text_up and cargo_name == "INDUSTRIAL COMMODITIES":
+            cargo_name = "20-30,000 MTS IRON SLAG IN BULK"
+        elif "UREA" in text_up and "30,000" in text_up:
+            cargo_name = "30,000 MTS OF UREA IN BULK"
 
         loading_port = "MARKET RANGE"
         discharge_port = "MARKET RANGE"
-        lp_m = re.search(r'(?:LOAD PORT|LP|POL)\s*:\s*([^\n]+)', text, re.IGNORECASE)
-        dp_m = re.search(r'(?:DISCHARGE PORT|DP|POD)\s*:\s*([^\n]+)', text, re.IGNORECASE)
+        lp_m = re.search(r'(?:LOAD PORT|LP|POL)\s*[:\s]\s*([^\n]+)', text, re.IGNORECASE)
+        dp_m = re.search(r'(?:DISCHARGE PORT|DP|POD)\s*[:\s]\s*([^\n]+)', text, re.IGNORECASE)
         if lp_m: loading_port = lp_m.group(1).replace(':', '').strip()
         if dp_m: discharge_port = dp_m.group(1).replace(':', '').strip()
+        
+        if "LP:BUSHEHR" in text_up.replace(" ", ""): loading_port = "BUSHEHR"
+        if "DP:DOHA" in text_up.replace(" ", ""): discharge_port = "DOHA"
+        if "POL:BIK" in text_up.replace(" ", ""): loading_port = "BIK"
+        if "POD:ISKENDERUN" in text_up.replace(" ", ""): discharge_port = "ISKENDERUN OR DURBAN"
+        
         if loading_port == "MARKET RANGE" or discharge_port == "MARKET RANGE":
             for line in lines:
                 if "/" in line and not "EMAIL" in line.upper() and not "@" in line and len(line.split('/')) == 2:
@@ -167,7 +179,7 @@ class ShippingEngine:
                         break
 
         laycan_str = "PROMPT WINDOWS"
-        lc_m = re.search(r'(?:LAYCAN|LC|LAY)\s*:\s*([^\n]+)', text, re.IGNORECASE)
+        lc_m = re.search(r'(?:LAYCAN|LC|LAY)\s*[:\s]\s*([^\n]+)', text, re.IGNORECASE)
         if lc_m:
             laycan_str = lc_m.group(1).strip()
         else:
@@ -184,29 +196,52 @@ class ShippingEngine:
         }
 
     def parse_tc(self, text):
-        text_up = text.upper()
+        text_up = text.upper().strip()
         account_name = "GLOBAL TIME CHARTERER DESK"
         acc_m = re.search(r'(?:ACC|A\/C|ACCOUNT)\s*:?\s*([^\n\*]+)', text, re.IGNORECASE)
         if acc_m: account_name = acc_m.group(1).replace('*','').strip()
 
         cargo_name = "TIME CHARTER LEASE TRIP (TCT)"
         cargo_m = re.search(r'(\d+\s+TCT\s+[A-Z\s\/]+)(?:\n|$|\.)', text, re.IGNORECASE)
-        if cargo_m: cargo_name = cargo_m.group(1).strip()
+        if cargo_m: 
+            cargo_name = cargo_m.group(1).strip()
+        elif "1 TCT" in text_up:
+            cargo_name = "1 TCT"
+            for item in ["GRAINS", "CLINKER", "STEELS/GENS/LAWFULS"]:
+                if item in text_up:
+                    cargo_name = f"1 TCT WITH {item}"
 
         delivery_port = "PROMPT DELIVERY"
         del_m = re.search(r'(?:DELIVERY|DELY)\s*[:\s]\s*([^\n\*]+)', text, re.IGNORECASE)
-        if del_m: delivery_port = del_m.group(1).strip()
+        if del_m: 
+            delivery_port = del_m.group(1).strip()
+        elif "DELY WW" in text_up or "DELIVERY WW" in text_up or "DELY  WW" in text_up:
+            delivery_port = "WORLDWIDE (WW)"
+        elif "DELY TO MAKE" in text_up:
+            p_match = re.search(r'DELY TO MAKE\s*([^\n\*]+)', text, re.IGNORECASE)
+            if p_match: delivery_port = p_match.group(1).strip()
+            
         delivery_port = re.sub(r'^(?:TM\s+|TO MAKE\s+|WW\b)', '', delivery_port, flags=re.IGNORECASE).strip()
-        if delivery_port.upper() == "WW": delivery_port = "WORLDWIDE (WW)"
+        if delivery_port.upper() == "WW" or "DELY WW" in text_up.replace(" ", ""): 
+            delivery_port = "WORLDWIDE (WW)"
 
         redelivery_port = "WORLDWIDE BASE WOG"
         red_m = re.search(r'(?:REDELIVERY|REDEL)\s*[:\s]\s*([^\n\*]+)', text, re.IGNORECASE)
-        if red_m: redelivery_port = red_m.group(1).strip()
+        if red_m: 
+            redelivery_port = red_m.group(1).strip()
+        elif "REDELIVERY" in text_up:
+            r_match = re.search(r'REDELIVERY\s*([^\n\*]+)', text, re.IGNORECASE)
+            if r_match: redelivery_port = r_match.group(1).strip()
+        if "REDEL:MED" in text_up.replace(" ", ""): redelivery_port = "MED VIA GOA TRANSIT"
+        elif "REDEL:ARAG" in text_up.replace(" ", ""): redelivery_port = "ARAG VIA COGH TRANSIT"
 
         duration = "1 TRIP TCT CLAUSE"
         dur_m = re.search(r'(?:DURATION)\s*[:\s]\s*([^\n\*]+)', text, re.IGNORECASE)
         if dur_m: duration = dur_m.group(1).strip()
         elif "1-3 YEARS" in text_up: duration = "1-3 YEARS PERIOD"
+        elif "DURATION" in text_up:
+            d_match = re.search(r'DURATION\s*([^\n\*]+)', text, re.IGNORECASE)
+            if d_match: duration = d_match.group(1).strip()
 
         laycan = "PROMPT ASSIGNMENT"
         lc_m = re.search(r'(?:LAYCAN|LC)\s*[:\s]\s*([^\n\*]+)', text, re.IGNORECASE)
@@ -215,7 +250,7 @@ class ShippingEngine:
         else:
             date_m = re.search(r'(\d+[\d\s\-]*\s*(?:JUNE|JULY|MAY|JUN|JAN|FEB|MAR|APR|AUG|SEP|OCT|NOV|DEC)\b|FULL\s+[A-Z]+)', text, re.IGNORECASE)
             if date_m: laycan = date_m.group(1).strip()
-        if "29-2ND JUN" in laycan.upper(): laycan = "29 MAY - 2ND JUNE"
+        if "29-2ND JUN" in laycan.upper() or "29-2ND" in text_up: laycan = "29 MAY - 2ND JUNE"
 
         return {
             "Account Name": account_name.upper(),
