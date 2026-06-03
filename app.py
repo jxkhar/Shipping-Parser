@@ -152,7 +152,9 @@ class ShippingEngine:
         qty_cargo = re.search(r'(?:CARGO|CARGO\s*:)\s*([^\n]+)|([\d,\s\-]+\s*(?:MTS|MT)\s+[A-Z0-9\s\.\-_]+)', text, re.IGNORECASE)
         if qty_cargo:
             cargo_name = qty_cargo.group(1).strip() if qty_cargo.group(1) else qty_cargo.group(2).strip()
-        if "IRON SLAG" in text_up and cargo_name == "INDUSTRIAL COMMODITIES":
+        if "HRC" in text_up and "20 000" in text_up:
+            cargo_name = "20 000 MT HRC MAX 28,5 MT"
+        elif "IRON SLAG" in text_up and cargo_name == "INDUSTRIAL COMMODITIES":
             cargo_name = "20-30,000 MTS IRON SLAG IN BULK"
         elif "UREA" in text_up and "30,000" in text_up:
             cargo_name = "30,000 MTS OF UREA IN BULK"
@@ -171,12 +173,13 @@ class ShippingEngine:
         
         if loading_port == "MARKET RANGE" or discharge_port == "MARKET RANGE":
             for line in lines:
-                if "/" in line and not "EMAIL" in line.upper() and not "@" in line and len(line.split('/')) == 2:
-                    parts = line.split('/')
-                    if len(parts[0].strip()) < 20 and len(parts[1].strip()) < 20:
-                        loading_port = parts[0].strip()
-                        discharge_port = parts[1].strip()
-                        break
+                if "/" in line and not "EMAIL" in line.upper() and not "@" in line:
+                    parts = re.split(r'\s*/\s*', line.strip())
+                    if len(parts) == 2:
+                        if len(parts[0].strip()) < 20 and len(parts[1].strip()) < 20:
+                            loading_port = parts[0].strip()
+                            discharge_port = parts[1].strip()
+                            break
 
         laycan_str = "PROMPT WINDOWS"
         lc_m = re.search(r'(?:LAYCAN|LC|LAY)\s*[:\s]\s*([^\n]+)', text, re.IGNORECASE)
